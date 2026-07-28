@@ -10,6 +10,7 @@ pkgs.mkShellNoCC {
     pkgs.gnugrep
     pkgs.gnused
     pkgs.jq
+    pkgs.python3
 
     # Nix build UX
     pkgs.nix-output-monitor
