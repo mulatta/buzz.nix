@@ -3,6 +3,8 @@
 
   nixConfig = {
     allow-import-from-derivation = false;
+    extra-substituters = [ "https://cache.mulatta.io" ];
+    extra-trusted-public-keys = [ "cache.mulatta.io-1:DrV+Oy2azNyVKM7ihhD1QoOetRUnW+1G6RWToUpSO4U=" ];
   };
 
   inputs = {
