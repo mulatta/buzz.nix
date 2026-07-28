@@ -1,0 +1,68 @@
+name: Update buzz source
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'buzz tag to pin, empty for latest release'
+        required: false
+        default: ''
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: update-buzz-source
+  cancel-in-progress: true
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            allow-import-from-derivation = false
+      - name: Set up git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Update source pin
+        id: update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPDATE_TAG: ${{ inputs.tag }}
+        run: |
+          nix develop -c bash -euo pipefail -c '
+            if [ -n "$UPDATE_TAG" ]; then
+              ./packages/source/update.py --tag "$UPDATE_TAG"
+            else
+              ./packages/source/update.py
+            fi
+          '
+      - name: Create pull request
+        if: steps.update.outputs.updated == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW_VERSION: ${{ steps.update.outputs.new_version }}
+        run: |
+          nix develop -c bash -euo pipefail -c '
+            branch="update/buzz-${NEW_VERSION}"
+            git checkout -B "$branch"
+            git add packages/source/hashes.json
+            git commit -m "source: pin buzz ${NEW_VERSION}"
+            git push --force origin "$branch"
+            if gh pr view "$branch" --json number >/dev/null 2>&1; then
+              gh pr edit "$branch" \
+                --title "source: pin buzz ${NEW_VERSION}" \
+                --body "Automated update of the pinned block/buzz source to ${NEW_VERSION}."
+            else
+              gh pr create \
+                --base main \
+                --head "$branch" \
+                --title "source: pin buzz ${NEW_VERSION}" \
+                --body "Automated update of the pinned block/buzz source to ${NEW_VERSION}."
+            fi
+          '

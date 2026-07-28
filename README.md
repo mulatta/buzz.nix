@@ -61,11 +61,19 @@ nix build .#checks.aarch64-darwin.package-buzz-desktop --no-link
 nix build .#checks.x86_64-linux.package-buzz-desktop --no-link
 ```
 
-Format Nix files:
+Format repository files:
 
 ```sh
 nix fmt
 ```
+
+Update the pinned buzz release:
+
+```sh
+./packages/source/update.py --tag v0.5.0
+```
+
+Omit `--tag` to use the latest upstream release.
 
 ## Layout
 
