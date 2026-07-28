@@ -6,21 +6,21 @@ This flake pins Buzz to the release tag recorded in `packages/source/hashes.json
 
 ## Packages
 
-| Package                 | Description                                                          |
+| Package | Description |
 | ----------------------- | -------------------------------------------------------------------- |
-| `buzz-cli`              | Buzz command-line client (`buzz`)                                    |
-| `buzz-acp`              | ACP harness for Buzz agent integrations                              |
-| `buzz-agent`            | Minimal ACP-compliant Buzz agent                                     |
-| `buzz-dev-mcp`          | MCP server for shell and file-edit tools                             |
-| `git-credential-nostr`  | Git credential helper for NIP-98 authentication                      |
-| `buzz-agent-tools`      | Convenience bundle for CLI and agent tools                           |
-| `buzz-web`              | Web client bundle                                                    |
-| `buzz-admin-web`        | Relay administration UI bundle                                       |
-| `buzz-server-binaries`  | Server binary bundle (`buzz-relay`, `buzz-admin`, `buzz-pair-relay`) |
-| `buzz-relay`            | Relay runtime package with bundled web UIs                           |
-| `buzz-desktop-frontend` | Frontend bundle embedded in Buzz Desktop                             |
-| `buzz-desktop-sidecars` | Sidecar bundle required by Buzz Desktop                              |
-| `buzz-desktop`          | Tauri desktop application                                            |
+| `buzz-cli` | Buzz command-line client (`buzz`) |
+| `buzz-acp` | ACP harness for Buzz agent integrations |
+| `buzz-agent` | Minimal ACP-compliant Buzz agent |
+| `buzz-dev-mcp` | MCP server for shell and file-edit tools |
+| `git-credential-nostr` | Git credential helper for NIP-98 authentication |
+| `buzz-agent-tools` | Convenience bundle for CLI and agent tools |
+| `buzz-web` | Web client bundle |
+| `buzz-admin-web` | Relay administration UI bundle |
+| `buzz-server-binaries` | Server binary bundle (`buzz-relay`, `buzz-admin`, `buzz-pair-relay`) |
+| `buzz-relay` | Relay runtime package with bundled web UIs |
+| `buzz-desktop-frontend` | Frontend bundle embedded in Buzz Desktop |
+| `buzz-desktop-sidecars` | Sidecar bundle required by Buzz Desktop |
+| `buzz-desktop` | Tauri desktop application |
 
 ## Usage
 

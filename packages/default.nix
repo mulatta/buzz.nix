@@ -1,4 +1,6 @@
 {
+  flake,
+  inputs,
   lib,
   pkgs,
 }:
@@ -16,7 +18,11 @@ let
     self:
     {
       # Use extended flake lib so package.nix files can access lib.buzz helpers.
-      inherit lib;
+      inherit
+        flake
+        inputs
+        lib
+        ;
 
       source = self.callPackage ./source { };
       pnpmDeps = self.callPackage ./pnpm-deps {
