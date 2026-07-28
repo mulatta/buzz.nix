@@ -14,11 +14,10 @@
   };
 
   outputs =
-    {
+    inputs@{
       self,
       nixpkgs,
       rust-overlay,
-      treefmt-nix,
       ...
     }:
     let
@@ -41,24 +40,13 @@
         }
       );
 
-      treefmtEval = eachSystem (
-        system:
-        treefmt-nix.lib.evalModule pkgsFor.${system} {
-          projectRootFile = "flake.nix";
-          programs = {
-            deadnix.enable = true;
-            keep-sorted.enable = true;
-            nixfmt.enable = true;
-            statix.enable = true;
-          };
-        }
-      );
     in
     {
       packages = eachSystem (
         system:
         import ./packages {
-          inherit lib;
+          inherit inputs lib;
+          flake = self;
           pkgs = pkgsFor.${system};
         }
       );
@@ -68,17 +56,17 @@
         lib.mapAttrs' (name: package: lib.nameValuePair "package-${name}" package) self.packages.${system}
         // {
           devshell-default = self.devShells.${system}.default;
-          formatting = treefmtEval.${system}.config.build.check self;
+          formatting = self.packages.${system}.formatter.passthru.tests.check;
         }
       );
 
       devShells = eachSystem (system: {
         default = import ./devshell.nix {
           pkgs = pkgsFor.${system};
-          formatter = treefmtEval.${system}.config.build.wrapper;
+          formatter = self.packages.${system}.formatter;
         };
       });
 
-      formatter = eachSystem (system: treefmtEval.${system}.config.build.wrapper);
+      formatter = eachSystem (system: self.packages.${system}.formatter);
     };
 }
