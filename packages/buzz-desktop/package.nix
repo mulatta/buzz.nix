@@ -5,7 +5,7 @@
   buzz-desktop-sidecars,
 }:
 
-if !pkgs.stdenv.hostPlatform.isLinux then
+if !(pkgs.stdenv.hostPlatform.isLinux || pkgs.stdenv.hostPlatform.isDarwin) then
   { }
 else
   let
@@ -72,7 +72,9 @@ else
         --replace-fail '"beforeBuildCommand": "pnpm build"' '"beforeBuildCommand": null'
     '';
 
-    buzz-desktop = import ./linux.nix {
+    packageFile = if pkgs.stdenv.hostPlatform.isLinux then ./linux.nix else ./darwin.nix;
+
+    buzz-desktop = import packageFile {
       inherit
         baseArgs
         pkgs
