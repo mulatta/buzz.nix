@@ -58,7 +58,6 @@
         lib.mapAttrs' (name: package: lib.nameValuePair "package-${name}" package) self.packages.${system}
         // {
           devshell-default = self.devShells.${system}.default;
-          formatting = self.packages.${system}.formatter.passthru.tests.check;
         }
       );
 
