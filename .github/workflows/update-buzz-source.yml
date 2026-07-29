@@ -51,7 +51,10 @@ jobs:
           nix develop -c bash -euo pipefail -c '
             branch="update/buzz-${NEW_VERSION}"
             git checkout -B "$branch"
-            git add packages/source/hashes.json
+            git add \
+              packages/source/hashes.json \
+              packages/build-buzz-rust/hashes.json \
+              packages/buzz-desktop/hashes.json
             git commit -m "source: pin buzz ${NEW_VERSION}"
             git push --force origin "$branch"
             if gh pr view "$branch" --json number >/dev/null 2>&1; then

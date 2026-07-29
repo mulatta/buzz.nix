@@ -1,46 +1,35 @@
 {
-  lib,
-  pkgs,
+  buildBuzzRust,
   source,
 }:
 
-let
-  buzzRust = lib.buzz.mkBuzzRustPackage { inherit lib pkgs source; };
-in
-buzzRust.rustPlatform.buildRustPackage (
-  buzzRust.commonArgs
-  // {
-    pname = "buzz-server-binaries";
-    version = source.relayVersion;
-    cargoBuildFlags = [
-      "-p"
-      "buzz-relay"
-      "--bin"
-      "buzz-relay"
-      "-p"
-      "buzz-admin"
-      "--bin"
-      "buzz-admin"
-      "-p"
-      "buzz-pair-relay"
-      "--bin"
-      "buzz-pair-relay"
-    ];
+buildBuzzRust {
+  pname = "buzz-server-binaries";
+  version = source.relayVersion;
 
-    postPatch = ''
-      substituteInPlace crates/buzz-relay/src/api/git/hook.rs \
-        --replace-fail '#!/usr/bin/env bash' '#!${lib.getExe pkgs.bashNonInteractive}'
-    '';
+  targets = [
+    {
+      package = "buzz-relay";
+      binary = "buzz-relay";
+    }
+    {
+      package = "buzz-admin";
+      binary = "buzz-admin";
+    }
+    {
+      package = "buzz-pair-relay";
+      binary = "buzz-pair-relay";
+    }
+  ];
 
-    doInstallCheck = true;
-    installCheckPhase = ''
-      test -x "$out/bin/buzz-relay"
-      "$out/bin/buzz-admin" --help >/dev/null
-      test -x "$out/bin/buzz-pair-relay"
-    '';
+  needsOpenSSL = false;
+  mainProgram = null;
 
-    meta = buzzRust.commonArgs.meta // {
-      description = "Buzz relay server and administration tools";
-    };
-  }
-)
+  installCheckPhase = ''
+    test -x "$out/bin/buzz-relay"
+    "$out/bin/buzz-admin" --help >/dev/null
+    test -x "$out/bin/buzz-pair-relay"
+  '';
+
+  metaDescription = "Buzz relay server and administration tools";
+}

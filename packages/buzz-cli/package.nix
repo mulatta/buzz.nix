@@ -1,15 +1,7 @@
-{
-  lib,
-  pkgs,
-  source,
-}:
+{ buildBuzzRust }:
 
-let
-  buzzRust = lib.buzz.mkBuzzRustPackage { inherit lib pkgs source; };
-in
-buzzRust.mkAgentTool {
+buildBuzzRust {
   pname = "buzz-cli";
-  package = "buzz-cli";
   binary = "buzz";
   metaDescription = "Agent-first CLI for Buzz relay";
   installCheckPhase = ''

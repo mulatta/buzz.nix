@@ -9,6 +9,8 @@ if !(pkgs.stdenv.hostPlatform.isLinux || pkgs.stdenv.hostPlatform.isDarwin) then
   { }
 else
   let
+    data = pkgs.lib.importJSON ./hashes.json;
+
     rustToolchain = pkgs.rust-bin.stable.${source.rustVersion}.default;
     rustPlatform = pkgs.makeRustPlatform {
       cargo = rustToolchain;
@@ -21,7 +23,7 @@ else
     baseArgs = {
       pname = "buzz-desktop";
       inherit (source) version src;
-      cargoHash = source.desktopCargoHash;
+      inherit (data) cargoHash;
       cargoRoot = "desktop/src-tauri";
       strictDeps = true;
 
