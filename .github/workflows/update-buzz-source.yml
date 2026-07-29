@@ -53,6 +53,7 @@ jobs:
             git checkout -B "$branch"
             git add \
               packages/source/hashes.json \
+              packages/build-buzz-frontend/hashes.json \
               packages/build-buzz-rust/hashes.json \
               packages/buzz-desktop/hashes.json
             git commit -m "source: pin buzz ${NEW_VERSION}"
