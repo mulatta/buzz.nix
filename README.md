@@ -90,6 +90,8 @@ Health and metrics listeners are bound by upstream to `0.0.0.0:${healthPort}` an
 
 APNs push is disabled by default in the NixOS module by setting `BUZZ_PUSH_GATEWAY_DELIVERY_URL` to an empty string. Set `services.buzz-relay.pushGateway.deliveryUrl` explicitly to use Block's public gateway or a separately deployed self-host push gateway.
 
+The RustFS release currently packaged by nixpkgs passes basic S3 round trips but returns HTTP 503 during Buzz's concurrent `If-Match` A3 probe. `nixos-buzz-relay-rustfs-gate` verifies that the relay fails closed before opening listeners; it is not a successful integration test or a production endorsement of RustFS.
+
 ## Development
 
 Enter the development shell:
@@ -106,6 +108,7 @@ nix build .#checks.aarch64-darwin.package-buzz-cli --no-link
 nix build .#checks.aarch64-darwin.package-buzz-desktop --no-link
 nix build .#checks.x86_64-linux.package-buzz-desktop --no-link
 nix build .#checks.x86_64-linux.module-buzz-relay --no-link
+nix build .#checks.x86_64-linux.nixos-buzz-relay-rustfs-gate --no-link
 ```
 
 Format repository files:
