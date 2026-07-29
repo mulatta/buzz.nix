@@ -6,7 +6,7 @@
 }:
 
 let
-  data = lib.importJSON ./hashes.json;
+  data = (lib.importJSON ./hashes.json).sherpaOnnx;
   system = stdenv.hostPlatform.system;
   archive =
     data.archives.${system}

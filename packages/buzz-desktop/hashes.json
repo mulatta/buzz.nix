@@ -1,17 +1,20 @@
 {
-  "version": "1.13.4",
-  "archives": {
-    "x86_64-linux": {
-      "file": "sherpa-onnx-v1.13.4-linux-x64-static-lib.tar.bz2",
-      "hash": "sha256-mLDjGZZCb254JE284ZVVSPLGTo8BxL51uFr3zaoujVw="
-    },
-    "aarch64-linux": {
-      "file": "sherpa-onnx-v1.13.4-linux-aarch64-static-lib.tar.bz2",
-      "hash": "sha256-I7M2Fnh8yUnVsUOOl5RVD4BeIIoBTFwiRUgyB8WLvA8="
-    },
-    "aarch64-darwin": {
-      "file": "sherpa-onnx-v1.13.4-osx-arm64-static-lib.tar.bz2",
-      "hash": "sha256-V4Adsru3hqXTQ/UVo4/yELQBhCM4vcgE+gdTEtHNJAQ="
+  "cargoHash": "sha256-WF+EUJyP875s/Q3QlMzHY553UWdzw+/uM13DLoRDf+8=",
+  "sherpaOnnx": {
+    "version": "1.13.4",
+    "archives": {
+      "x86_64-linux": {
+        "file": "sherpa-onnx-v1.13.4-linux-x64-static-lib.tar.bz2",
+        "hash": "sha256-mLDjGZZCb254JE284ZVVSPLGTo8BxL51uFr3zaoujVw="
+      },
+      "aarch64-linux": {
+        "file": "sherpa-onnx-v1.13.4-linux-aarch64-static-lib.tar.bz2",
+        "hash": "sha256-I7M2Fnh8yUnVsUOOl5RVD4BeIIoBTFwiRUgyB8WLvA8="
+      },
+      "aarch64-darwin": {
+        "file": "sherpa-onnx-v1.13.4-osx-arm64-static-lib.tar.bz2",
+        "hash": "sha256-V4Adsru3hqXTQ/UVo4/yELQBhCM4vcgE+gdTEtHNJAQ="
+      }
     }
   }
 }

@@ -1,13 +1,23 @@
 {
+  fetchPnpmDeps,
   lib,
   pkgs,
-  pnpmDeps,
   source,
 }:
 
 let
+  data = lib.importJSON ./hashes.json;
+
   pnpm = pkgs.pnpm_11.override {
     nodejs-slim = pkgs.nodejs_24;
+  };
+
+  pnpmDeps = fetchPnpmDeps {
+    pname = "buzz-workspace";
+    inherit (source) version src;
+    inherit pnpm;
+    fetcherVersion = 4;
+    hash = data.pnpmHash;
   };
 in
 {
@@ -18,11 +28,10 @@ in
 }:
 
 pkgs.stdenvNoCC.mkDerivation {
-  inherit pname;
+  inherit pname pnpmDeps;
   inherit (source) version src;
   strictDeps = true;
 
-  inherit pnpmDeps;
   pnpmWorkspaces = [ workspace ];
 
   nativeBuildInputs = [

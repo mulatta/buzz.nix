@@ -1,21 +1,6 @@
-{
-  lib,
-  pkgs,
-  pnpmDeps,
-  source,
-}:
+{ buildBuzzFrontend }:
 
-let
-  mkBuzzFrontend = lib.buzz.mkBuzzFrontendPackage {
-    inherit
-      lib
-      pkgs
-      pnpmDeps
-      source
-      ;
-  };
-in
-mkBuzzFrontend {
+buildBuzzFrontend {
   pname = "buzz-desktop-frontend";
   workspace = "buzz";
   sourceDir = "desktop";

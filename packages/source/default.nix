@@ -19,7 +19,5 @@ in
     relayVersion
     rustVersion
     rev
-    rootCargoHash
-    desktopCargoHash
     ;
 }

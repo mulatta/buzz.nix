@@ -7,7 +7,7 @@
 
 let
   # Only directories with package.nix become flake package outputs.
-  # Directories with default.nix are internal scope derivations.
+  # Directories with default.nix provide internal package-scope values.
   publicPackageNames = builtins.attrNames (
     lib.filterAttrs (
       name: type: type == "directory" && builtins.pathExists (./. + "/${name}/package.nix")
@@ -17,7 +17,6 @@ let
   packageScope = lib.makeScope pkgs.newScope (
     self:
     {
-      # Use extended flake lib so package.nix files can access lib.buzz helpers.
       inherit
         flake
         inputs
@@ -25,9 +24,8 @@ let
         ;
 
       source = self.callPackage ./source { };
-      pnpmDeps = self.callPackage ./pnpm-deps {
-        inherit (self) source;
-      };
+      buildBuzzFrontend = self.callPackage ./build-buzz-frontend { };
+      buildBuzzRust = self.callPackage ./build-buzz-rust { };
     }
     // lib.genAttrs publicPackageNames (name: self.callPackage (./. + "/${name}/package.nix") { })
   );

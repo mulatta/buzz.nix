@@ -12,7 +12,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-HASHES_PATH = Path("packages/source/hashes.json")
+SOURCE_HASHES_PATH = Path("packages/source/hashes.json")
+RUST_HASHES_PATH = Path("packages/build-buzz-rust/hashes.json")
+DESKTOP_HASHES_PATH = Path("packages/buzz-desktop/hashes.json")
+MANAGED_HASH_PATHS = (SOURCE_HASHES_PATH, RUST_HASHES_PATH, DESKTOP_HASHES_PATH)
 FAKE_HASH = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 GOT_HASH_RE = re.compile(r"got:\s+(sha256-[A-Za-z0-9+/=]+)")
 
@@ -77,12 +80,12 @@ def read_rust_version(source: Path) -> str:
     raise RuntimeError(f"channel not found in {toolchain}")
 
 
-def load_hashes() -> dict[str, Any]:
-    return json.loads(HASHES_PATH.read_text())
+def load_hashes(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text())
 
 
-def save_hashes(data: dict[str, Any]) -> None:
-    HASHES_PATH.write_text(json.dumps(data, indent=2) + "\n")
+def save_hashes(path: Path, data: dict[str, Any]) -> None:
+    path.write_text(json.dumps(data, indent=2) + "\n")
 
 
 def write_output(key: str, value: str) -> None:
@@ -96,7 +99,11 @@ def write_output(key: str, value: str) -> None:
 
 def git_has_changes() -> bool:
     return (
-        run(["git", "diff", "--quiet", str(HASHES_PATH)], check=False).returncode != 0
+        run(
+            ["git", "diff", "--quiet", "--", *map(str, MANAGED_HASH_PATHS)],
+            check=False,
+        ).returncode
+        != 0
     )
 
 
@@ -122,25 +129,30 @@ def update(tag: str) -> None:
     rust_version = read_rust_version(source_path)
     relay_version = read_toml_version(source_path / "crates/buzz-relay/Cargo.toml")
 
-    data = load_hashes()
-    data.update(
+    source_data = load_hashes(SOURCE_HASHES_PATH)
+    rust_data = load_hashes(RUST_HASHES_PATH)
+    desktop_data = load_hashes(DESKTOP_HASHES_PATH)
+
+    source_data.update(
         {
             "version": version,
             "relayVersion": relay_version,
             "rustVersion": rust_version,
             "rev": tag,
             "hash": source_hash,
-            "rootCargoHash": FAKE_HASH,
-            "desktopCargoHash": FAKE_HASH,
         }
     )
-    save_hashes(data)
+    rust_data["cargoHash"] = FAKE_HASH
+    desktop_data["cargoHash"] = FAKE_HASH
+    save_hashes(SOURCE_HASHES_PATH, source_data)
+    save_hashes(RUST_HASHES_PATH, rust_data)
+    save_hashes(DESKTOP_HASHES_PATH, desktop_data)
 
-    data["rootCargoHash"] = refresh_cargo_hash(".#buzz-cli")
-    save_hashes(data)
+    rust_data["cargoHash"] = refresh_cargo_hash(".#buzz-cli")
+    save_hashes(RUST_HASHES_PATH, rust_data)
 
-    data["desktopCargoHash"] = refresh_cargo_hash(".#buzz-desktop")
-    save_hashes(data)
+    desktop_data["cargoHash"] = refresh_cargo_hash(".#buzz-desktop")
+    save_hashes(DESKTOP_HASHES_PATH, desktop_data)
 
 
 def parse_args() -> argparse.Namespace:

@@ -23,8 +23,7 @@
       ...
     }:
     let
-      baseLib = nixpkgs.lib;
-      lib = baseLib.extend (import ./lib);
+      inherit (nixpkgs) lib;
 
       systems = [
         "x86_64-linux"

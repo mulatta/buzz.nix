@@ -78,8 +78,8 @@ Omit `--tag` to use the latest upstream release.
 ## Layout
 
 - `packages/*/package.nix` are public flake package definitions.
-- `packages/source` and `packages/pnpm-deps` are internal derivations used by the package scope.
-- `lib` contains shared package helpers exposed through `lib.buzz`.
+- `packages/source` provides the pinned upstream source and release metadata.
+- `packages/build-buzz-frontend` and `packages/build-buzz-rust` are package-scoped internal builders with locally owned dependency hashes.
 
 ## Licensing
 
