@@ -76,6 +76,12 @@
         // {
           devshell-default = self.devShells.${system}.default;
         }
+        // lib.optionalAttrs (system == "x86_64-linux") {
+          module-buzz-relay = import ./modules/buzz-relay/nixos-test.nix {
+            module = self.nixosModules.buzz-relay;
+            pkgs = pkgsFor.${system};
+          };
+        }
       );
 
       devShells = eachSystem (system: {
@@ -86,5 +92,15 @@
       });
 
       formatter = eachSystem (system: packages.${system}.formatter);
+
+      nixosModules = {
+        buzz-relay =
+          { pkgs, ... }:
+          {
+            imports = [ ./modules/buzz-relay ];
+            services.buzz-relay.package = lib.mkDefault packages.${pkgs.stdenv.hostPlatform.system}.buzz-relay;
+          };
+        default = self.nixosModules.buzz-relay;
+      };
     };
 }
