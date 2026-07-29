@@ -35,38 +35,47 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           UPDATE_TAG: ${{ inputs.tag }}
         run: |
-          nix develop -c bash -euo pipefail -c '
-            if [ -n "$UPDATE_TAG" ]; then
-              ./packages/source/update.py --tag "$UPDATE_TAG"
-            else
-              ./packages/source/update.py
-            fi
-          '
+          if [ -n "$UPDATE_TAG" ]; then
+            nix develop -c ./packages/source/update.py --tag "$UPDATE_TAG"
+          else
+            nix develop -c ./packages/source/update.py
+          fi
       - name: Create pull request
         if: steps.update.outputs.updated == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NEW_VERSION: ${{ steps.update.outputs.new_version }}
         run: |
-          nix develop -c bash -euo pipefail -c '
-            branch="update/buzz-${NEW_VERSION}"
-            git checkout -B "$branch"
-            git add \
-              packages/source/hashes.json \
-              packages/build-buzz-frontend/hashes.json \
-              packages/build-buzz-rust/hashes.json \
-              packages/buzz-desktop/hashes.json
-            git commit -m "source: pin buzz ${NEW_VERSION}"
-            git push --force origin "$branch"
-            if gh pr view "$branch" --json number >/dev/null 2>&1; then
-              gh pr edit "$branch" \
-                --title "source: pin buzz ${NEW_VERSION}" \
-                --body "Automated update of the pinned block/buzz source to ${NEW_VERSION}."
-            else
-              gh pr create \
-                --base main \
-                --head "$branch" \
-                --title "source: pin buzz ${NEW_VERSION}" \
-                --body "Automated update of the pinned block/buzz source to ${NEW_VERSION}."
-            fi
-          '
+          branch="update/buzz-${NEW_VERSION}"
+          git checkout -B "$branch"
+          git add \
+            packages/source/hashes.json \
+            packages/build-buzz-frontend/hashes.json \
+            packages/build-buzz-rust/hashes.json \
+            packages/buzz-desktop/hashes.json
+          if git diff --cached --quiet; then
+            echo "Updater reported changes but produced no managed metadata diff" >&2
+            exit 1
+          fi
+          git commit -m "source: pin buzz ${NEW_VERSION}"
+
+          remote_sha=$(git ls-remote --heads origin "$branch" | cut -f1)
+          if [ -n "$remote_sha" ]; then
+            git push \
+              --force-with-lease="refs/heads/$branch:$remote_sha" \
+              origin "HEAD:refs/heads/$branch"
+          else
+            git push origin "HEAD:refs/heads/$branch"
+          fi
+
+          if gh pr view "$branch" --json number >/dev/null 2>&1; then
+            gh pr edit "$branch" \
+              --title "source: pin buzz ${NEW_VERSION}" \
+              --body "Automated update of the pinned block/buzz source to ${NEW_VERSION}."
+          else
+            gh pr create \
+              --base main \
+              --head "$branch" \
+              --title "source: pin buzz ${NEW_VERSION}" \
+              --body "Automated update of the pinned block/buzz source to ${NEW_VERSION}."
+          fi
