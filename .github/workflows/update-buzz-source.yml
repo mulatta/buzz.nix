@@ -18,9 +18,16 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
@@ -32,7 +39,7 @@ jobs:
       - name: Update source pin
         id: update
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           UPDATE_TAG: ${{ inputs.tag }}
         run: |
           if [ -n "$UPDATE_TAG" ]; then
@@ -43,13 +50,16 @@ jobs:
       - name: Create pull request
         if: steps.update.outputs.updated == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          OLD_VERSION: ${{ steps.update.outputs.old_version }}
           NEW_VERSION: ${{ steps.update.outputs.new_version }}
         run: |
+          title="buzz: ${OLD_VERSION} -> ${NEW_VERSION}"
+          compare_url="https://github.com/block/buzz/compare/v${OLD_VERSION}...v${NEW_VERSION}"
           branch="update/buzz-${NEW_VERSION}"
           git checkout -B "$branch"
           git add \
-            packages/source/hashes.json \
+            packages/source/pin.json \
             packages/build-buzz-frontend/hashes.json \
             packages/build-buzz-rust/hashes.json \
             packages/buzz-desktop/hashes.json
@@ -57,7 +67,10 @@ jobs:
             echo "Updater reported changes but produced no managed metadata diff" >&2
             exit 1
           fi
-          git commit -m "source: pin buzz ${NEW_VERSION}"
+          git commit \
+            --signoff \
+            -m "$title" \
+            -m "$compare_url"
 
           remote_sha=$(git ls-remote --heads origin "$branch" | cut -f1)
           if [ -n "$remote_sha" ]; then
@@ -70,12 +83,14 @@ jobs:
 
           if gh pr view "$branch" --json number >/dev/null 2>&1; then
             gh pr edit "$branch" \
-              --title "source: pin buzz ${NEW_VERSION}" \
-              --body "Automated update of the pinned block/buzz source to ${NEW_VERSION}."
+              --title "$title" \
+              --body "$compare_url"
           else
             gh pr create \
               --base main \
               --head "$branch" \
-              --title "source: pin buzz ${NEW_VERSION}" \
-              --body "Automated update of the pinned block/buzz source to ${NEW_VERSION}."
+              --title "$title" \
+              --body "$compare_url"
           fi
+
+          gh pr merge "$branch" --auto --merge

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SOURCE_HASHES_PATH = REPO_ROOT / "packages/source/hashes.json"
+SOURCE_PIN_PATH = REPO_ROOT / "packages/source/pin.json"
 FRONTEND_HASHES_PATH = REPO_ROOT / "packages/build-buzz-frontend/hashes.json"
 RUST_HASHES_PATH = REPO_ROOT / "packages/build-buzz-rust/hashes.json"
 DESKTOP_HASHES_PATH = REPO_ROOT / "packages/buzz-desktop/hashes.json"
@@ -282,20 +282,20 @@ def update(
     tag: str,
     *,
     force: bool = False,
-    source_hashes_path: Path = SOURCE_HASHES_PATH,
+    source_pin_path: Path = SOURCE_PIN_PATH,
     frontend_hashes_path: Path = FRONTEND_HASHES_PATH,
     rust_hashes_path: Path = RUST_HASHES_PATH,
     desktop_hashes_path: Path = DESKTOP_HASHES_PATH,
 ) -> bool:
     tag = require_release_tag(tag)
-    source_data = load_json(source_hashes_path)
+    source_data = load_json(source_pin_path)
     frontend_data = load_json(frontend_hashes_path)
     rust_data = load_json(rust_hashes_path)
     desktop_data = load_json(desktop_hashes_path)
     metadata = (source_data, frontend_data, rust_data, desktop_data)
 
     assert_no_fake_hashes(*metadata)
-    require_hash(source_data, "hash", source_hashes_path)
+    require_hash(source_data, "hash", source_pin_path)
     require_hash(frontend_data, "pnpmHash", frontend_hashes_path)
     require_hash(rust_data, "cargoHash", rust_hashes_path)
     require_hash(desktop_data, "cargoHash", desktop_hashes_path)
@@ -304,11 +304,12 @@ def update(
     if not isinstance(sherpa_data, dict):
         raise RuntimeError(f"sherpaOnnx is missing or invalid in {desktop_hashes_path}")
 
-    if source_data.get("rev") == tag and not force:
+    version = tag.removeprefix("v")
+    if source_data.get("version") == version and not force:
         return False
 
     managed_paths = (
-        source_hashes_path,
+        source_pin_path,
         frontend_hashes_path,
         rust_hashes_path,
         desktop_hashes_path,
@@ -317,7 +318,6 @@ def update(
 
     try:
         source_hash, source_path = prefetch_source(tag)
-        version = tag.removeprefix("v")
         relay_version = read_package_version(
             source_path / "crates/buzz-relay/Cargo.toml"
         )
@@ -335,11 +335,10 @@ def update(
                 "version": version,
                 "relayVersion": relay_version,
                 "rustVersion": rust_version,
-                "rev": tag,
                 "hash": source_hash,
             }
         )
-        save_json(source_hashes_path, source_data)
+        save_json(source_pin_path, source_data)
         save_json(desktop_hashes_path, desktop_data)
 
         refresh_fixed_output_hash(
@@ -391,8 +390,13 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    old_version = load_json(SOURCE_PIN_PATH).get("version")
+    if not isinstance(old_version, str):
+        raise RuntimeError(f"version is missing or invalid in {SOURCE_PIN_PATH}")
+
     tag = require_release_tag(args.tag) if args.tag else latest_tag()
     changed = update(tag, force=args.force)
+    write_output("old_version", old_version)
     write_output("new_version", tag.removeprefix("v"))
     write_output("updated", str(changed).lower())
 
