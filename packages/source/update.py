@@ -390,8 +390,13 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    old_version = load_json(SOURCE_PIN_PATH).get("version")
+    if not isinstance(old_version, str):
+        raise RuntimeError(f"version is missing or invalid in {SOURCE_PIN_PATH}")
+
     tag = require_release_tag(args.tag) if args.tag else latest_tag()
     changed = update(tag, force=args.force)
+    write_output("old_version", old_version)
     write_output("new_version", tag.removeprefix("v"))
     write_output("updated", str(changed).lower())
 
