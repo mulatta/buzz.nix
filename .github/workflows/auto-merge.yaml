@@ -12,3 +12,6 @@ jobs:
       cancel-in-progress: true
     steps:
       - uses: Mic92/auto-merge@main
+        with:
+          use-auto-merge: true
+          merge-method: merge
