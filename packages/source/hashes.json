@@ -1,7 +1,7 @@
 {
-  "version": "0.5.0",
+  "version": "0.5.2",
   "relayVersion": "0.2.0",
   "rustVersion": "1.95.0",
-  "rev": "v0.5.0",
-  "hash": "sha256-rrTpV4wYRdL1o0cJXifHz5qGJ4tlr2Go1g3MdNrj26w="
+  "rev": "v0.5.2",
+  "hash": "sha256-VWqoIS5FMyou6fEuuUq1OUIPycAtn0kVLbm5yCQAsOs="
 }
