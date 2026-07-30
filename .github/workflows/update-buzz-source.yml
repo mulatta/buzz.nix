@@ -49,7 +49,7 @@ jobs:
           branch="update/buzz-${NEW_VERSION}"
           git checkout -B "$branch"
           git add \
-            packages/source/hashes.json \
+            packages/source/pin.json \
             packages/build-buzz-frontend/hashes.json \
             packages/build-buzz-rust/hashes.json \
             packages/buzz-desktop/hashes.json

@@ -2,7 +2,7 @@
 
 Reproducible Nix packages for [block/buzz](https://github.com/block/buzz).
 
-This flake pins Buzz to the release tag recorded in `packages/source/hashes.json` and builds the Rust, web, relay, and desktop artifacts without import-from-derivation.
+This flake pins Buzz to the release tag recorded in `packages/source/pin.json` and builds the Rust, web, relay, and desktop artifacts without import-from-derivation.
 
 ## Packages
 
@@ -78,7 +78,7 @@ Omit `--tag` to use the latest upstream release.
 ## Layout
 
 - `packages/*/package.nix` are public flake package definitions.
-- `packages/source` provides the pinned upstream source and release metadata.
+- `packages/source` provides the pinned upstream source plus source-derived metadata needed at evaluation time.
 - `packages/build-buzz-frontend` and `packages/build-buzz-rust` are package-scoped internal builders with locally owned dependency hashes.
 
 ## Licensing
