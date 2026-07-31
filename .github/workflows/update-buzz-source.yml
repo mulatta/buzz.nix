@@ -22,9 +22,9 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.CLIENT_ID }}
+          client-id: ${{ secrets.CLIENT_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
@@ -32,6 +32,8 @@ jobs:
         with:
           extra_nix_config: |
             allow-import-from-derivation = false
+            extra-substituters = https://cache.mulatta.io
+            extra-trusted-public-keys = cache.mulatta.io-1:DrV+Oy2azNyVKM7ihhD1QoOetRUnW+1G6RWToUpSO4U=
       - name: Set up git
         run: |
           git config user.name "github-actions[bot]"
@@ -51,46 +53,7 @@ jobs:
         if: steps.update.outputs.updated == 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          OLD_VERSION: ${{ steps.update.outputs.old_version }}
-          NEW_VERSION: ${{ steps.update.outputs.new_version }}
         run: |
-          title="buzz: ${OLD_VERSION} -> ${NEW_VERSION}"
-          compare_url="https://github.com/block/buzz/compare/v${OLD_VERSION}...v${NEW_VERSION}"
-          branch="update/buzz-${NEW_VERSION}"
-          git checkout -B "$branch"
-          git add \
-            packages/source/pin.json \
-            packages/build-buzz-frontend/hashes.json \
-            packages/build-buzz-rust/hashes.json \
-            packages/buzz-desktop/hashes.json
-          if git diff --cached --quiet; then
-            echo "Updater reported changes but produced no managed metadata diff" >&2
-            exit 1
-          fi
-          git commit \
-            --signoff \
-            -m "$title" \
-            -m "$compare_url"
-
-          remote_sha=$(git ls-remote --heads origin "$branch" | cut -f1)
-          if [ -n "$remote_sha" ]; then
-            git push \
-              --force-with-lease="refs/heads/$branch:$remote_sha" \
-              origin "HEAD:refs/heads/$branch"
-          else
-            git push origin "HEAD:refs/heads/$branch"
-          fi
-
-          if gh pr view "$branch" --json number >/dev/null 2>&1; then
-            gh pr edit "$branch" \
-              --title "$title" \
-              --body "$compare_url"
-          else
-            gh pr create \
-              --base main \
-              --head "$branch" \
-              --title "$title" \
-              --body "$compare_url"
-          fi
-
-          gh pr merge "$branch" --auto --merge
+          .github/ci/create_pr.py \
+            "${{ steps.update.outputs.old_version }}" \
+            "${{ steps.update.outputs.new_version }}"
