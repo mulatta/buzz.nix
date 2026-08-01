@@ -92,7 +92,7 @@ in
       type = types.attrsOf types.str;
       default = { };
       example = {
-        BUZZ_DB_POOL_SIZE = "80";
+        BUZZ_RATE_LIMIT_HUMAN_MESSAGES_PER_MIN = "120";
       };
       description = ''
         Additional non-secret environment variables for upstream settings that
@@ -101,10 +101,31 @@ in
       '';
     };
 
+    redisPoolSize = mkOption {
+      type = types.ints.positive;
+      default = 16;
+      description = "Maximum number of connections in the shared Redis pool.";
+    };
+
+    databasePoolSize = mkOption {
+      type = types.ints.between 1 4294967295;
+      default = 50;
+      description = "Maximum number of connections in each PostgreSQL writer or read-replica pool.";
+    };
+
     autoMigrate = mkOption {
       type = types.bool;
       default = true;
       description = "Whether the relay applies database migrations during startup.";
+    };
+
+    auditEnabled = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Whether to write the tamper-evident event and media audit log. This does
+        not disable the separate moderation audit trail.
+      '';
     };
 
     requireAuthToken = mkOption {
@@ -167,6 +188,28 @@ in
       type = types.ints.positive;
       default = 1000;
       description = "Number of outbound messages buffered per connection.";
+    };
+
+    maxFrameBytes = mkOption {
+      type = types.ints.positive;
+      default = 512 * 1024;
+      description = "Maximum inbound WebSocket frame size in bytes.";
+    };
+
+    slowClientGraceLimit = mkOption {
+      type = types.ints.between 1 255;
+      default = 15;
+      description = "Number of consecutive full-buffer events tolerated before disconnecting a slow client.";
+    };
+
+    ephemeralTtlOverride = mkOption {
+      type = types.nullOr (types.ints.between 1 2147483647);
+      default = null;
+      example = 60;
+      description = ''
+        Optional lifetime in seconds applied to every ephemeral channel instead
+        of its client-provided TTL.
+      '';
     };
 
     huddleAudioAvailable = mkOption {

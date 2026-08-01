@@ -9,7 +9,7 @@ let
 
   bool = value: if value then "true" else "false";
   csv = lib.concatStringsSep ",";
-  optionalEnv = name: value: lib.optionalAttrs (value != null) { ${name} = value; };
+  optionalEnv = name: value: lib.optionalAttrs (value != null) { ${name} = toString value; };
   bracketHost =
     host: if lib.hasInfix ":" host && !(lib.hasPrefix "[" host) then "[${host}]" else host;
 
@@ -17,8 +17,11 @@ let
     BUZZ_BIND_ADDR = "${bracketHost cfg.listenAddress}:${toString cfg.port}";
     BUZZ_HEALTH_PORT = toString cfg.healthPort;
     BUZZ_METRICS_PORT = toString cfg.metricsPort;
+    BUZZ_REDIS_POOL_SIZE = toString cfg.redisPoolSize;
+    BUZZ_DB_POOL_SIZE = toString cfg.databasePoolSize;
     RELAY_URL = if cfg.relayUrl == null then "" else cfg.relayUrl;
     BUZZ_AUTO_MIGRATE = bool cfg.autoMigrate;
+    BUZZ_AUDIT_ENABLED = bool cfg.auditEnabled;
     BUZZ_REQUIRE_AUTH_TOKEN = bool cfg.requireAuthToken;
     BUZZ_REQUIRE_RELAY_MEMBERSHIP = bool cfg.requireRelayMembership;
     BUZZ_REQUIRE_MEDIA_GET_AUTH = bool cfg.requireMediaGetAuth;
@@ -27,6 +30,8 @@ let
     BUZZ_MAX_CONNECTIONS = toString cfg.maxConnections;
     BUZZ_MAX_CONCURRENT_HANDLERS = toString cfg.maxConcurrentHandlers;
     BUZZ_SEND_BUFFER = toString cfg.sendBuffer;
+    BUZZ_MAX_FRAME_BYTES = toString cfg.maxFrameBytes;
+    BUZZ_SLOW_CLIENT_GRACE_LIMIT = toString cfg.slowClientGraceLimit;
     BUZZ_HUDDLE_AUDIO_AVAILABLE = bool cfg.huddleAudioAvailable;
     BUZZ_PUSH_GATEWAY_DELIVERY_URL =
       if cfg.pushGateway.deliveryUrl == null then "" else cfg.pushGateway.deliveryUrl;
@@ -47,6 +52,7 @@ let
   // optionalEnv "RELAY_OWNER_PUBKEY" cfg.ownerPubkey
   // optionalEnv "BUZZ_ADMIN_HOST" cfg.adminHost
   // optionalEnv "BUZZ_CORS_ORIGINS" (if cfg.corsOrigins == [ ] then null else csv cfg.corsOrigins)
+  // optionalEnv "BUZZ_EPHEMERAL_TTL_OVERRIDE" cfg.ephemeralTtlOverride
   // optionalEnv "BUZZ_PAIRING_RELAY_URL" cfg.pairingRelay.url;
 
   reservedEnvironmentKeys = [
@@ -56,6 +62,7 @@ let
     "BUZZ_ADMIN_HOST"
     "BUZZ_ADMIN_WEB_DIR"
     "BUZZ_CORS_ORIGINS"
+    "BUZZ_EPHEMERAL_TTL_OVERRIDE"
     "BUZZ_GIT_HOOK_HMAC_SECRET"
     "BUZZ_PAIRING_RELAY_URL"
     "BUZZ_RELAY_PRIVATE_KEY"

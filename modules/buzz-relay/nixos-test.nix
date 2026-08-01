@@ -53,13 +53,19 @@ pkgs.testers.runNixOSTest {
       relayUrl = "wss://buzz.example";
       inherit ownerPubkey;
       environmentFiles = [ "/run/secrets/buzz-relay.env" ];
+      redisPoolSize = 32;
+      databasePoolSize = 80;
+      auditEnabled = false;
+      maxFrameBytes = 262144;
+      slowClientGraceLimit = 7;
+      ephemeralTtlOverride = 60;
       media = {
         baseUrl = "https://buzz.example/media";
         s3Endpoint = "http://127.0.0.1:9000";
       };
       adminHost = "admin.buzz.example";
       corsOrigins = [ "https://buzz.example" ];
-      environment.BUZZ_DB_POOL_SIZE = "80";
+      environment.BUZZ_RATE_LIMIT_HUMAN_MESSAGES_PER_MIN = "120";
       openFirewall = true;
       pairingRelay = {
         enable = true;
@@ -96,9 +102,12 @@ pkgs.testers.runNixOSTest {
         "BUZZ_BIND_ADDR=127.0.0.1:3000",
         "BUZZ_HEALTH_PORT=8080",
         "BUZZ_METRICS_PORT=9102",
+        "BUZZ_REDIS_POOL_SIZE=32",
+        "BUZZ_DB_POOL_SIZE=80",
         "RELAY_URL=wss://buzz.example",
         "RELAY_OWNER_PUBKEY=${ownerPubkey}",
         "BUZZ_AUTO_MIGRATE=true",
+        "BUZZ_AUDIT_ENABLED=false",
         "BUZZ_REQUIRE_AUTH_TOKEN=true",
         "BUZZ_REQUIRE_RELAY_MEMBERSHIP=true",
         "BUZZ_REQUIRE_MEDIA_GET_AUTH=true",
@@ -107,6 +116,9 @@ pkgs.testers.runNixOSTest {
         "BUZZ_MAX_CONNECTIONS=10000",
         "BUZZ_MAX_CONCURRENT_HANDLERS=1024",
         "BUZZ_SEND_BUFFER=1000",
+        "BUZZ_MAX_FRAME_BYTES=262144",
+        "BUZZ_SLOW_CLIENT_GRACE_LIMIT=7",
+        "BUZZ_EPHEMERAL_TTL_OVERRIDE=60",
         "BUZZ_HUDDLE_AUDIO_AVAILABLE=true",
         "BUZZ_PUSH_GATEWAY_DELIVERY_URL=",
         "BUZZ_MEDIA_BASE_URL=https://buzz.example/media",
@@ -124,7 +136,7 @@ pkgs.testers.runNixOSTest {
         "BUZZ_ADMIN_HOST=admin.buzz.example",
         "BUZZ_CORS_ORIGINS=https://buzz.example",
         "BUZZ_PAIRING_RELAY_URL=wss://pair.buzz.example",
-        "BUZZ_DB_POOL_SIZE=80",
+        "BUZZ_RATE_LIMIT_HUMAN_MESSAGES_PER_MIN=120",
         "RUST_LOG=buzz_relay=info",
         "TEST_SECRET=fixture",
     ]:

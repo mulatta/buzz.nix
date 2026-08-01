@@ -80,6 +80,21 @@ Expose the relay as a system service:
 }
 ```
 
+Common relay tuning is exposed through typed options rather than raw environment variables:
+
+```nix
+services.buzz-relay = {
+  redisPoolSize = 32;
+  databasePoolSize = 80;
+  maxFrameBytes = 1024 * 1024;
+  slowClientGraceLimit = 10;
+  auditEnabled = true;
+  ephemeralTtlOverride = 60;
+};
+```
+
+Leave `ephemeralTtlOverride` as `null` (the default) to honor client-provided ephemeral-channel lifetimes. Use `environment` only for non-secret upstream settings without a typed option.
+
 `services.buzz-relay` manages the Buzz relay process and optional pairing relay only. PostgreSQL, Redis, S3-compatible storage, bucket setup, reverse proxy, TLS, DNS, and secrets remain host responsibilities.
 
 Secret files must provide runtime credentials such as `DATABASE_URL`, `REDIS_URL`, `BUZZ_RELAY_PRIVATE_KEY`, `BUZZ_GIT_HOOK_HMAC_SECRET`, and S3 credentials when static keys are used. Do not put secrets in Nix options. Keep environment files secret-only: systemd loads them after generated variables, so they must not override typed options or package-owned `PATH`, `SSL_CERT_FILE`, `BUZZ_WEB_DIR`, and `BUZZ_ADMIN_WEB_DIR` values.
