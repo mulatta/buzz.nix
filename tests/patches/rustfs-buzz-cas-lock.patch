@@ -1,0 +1,118 @@
+Workaround for RustFS fast_lock waiter accounting bug that makes
+same-key concurrent If-Match PUT requests return HTTP 503 instead of
+one 2xx winner and 412 losers.
+
+Remove once RustFS upstream/nixpkgs contains the fix.
+
+diff --git a/crates/lock/src/fast_lock/state.rs b/crates/lock/src/fast_lock/state.rs
+index c7cb4311..94da9fb1 100644
+--- a/crates/lock/src/fast_lock/state.rs
++++ b/crates/lock/src/fast_lock/state.rs
+@@ -32,6 +32,7 @@ const WRITERS_WAITING_MASK: u64 = 0xFFFF << WRITERS_WAITING_SHIFT;
+ 
+ // Fast path check masks
+ const NO_WRITER_AND_NO_WAITING_WRITERS: u64 = WRITER_FLAG_MASK | WRITERS_WAITING_MASK;
++const ACTIVE_LOCKS_MASK: u64 = WRITER_FLAG_MASK | READERS_MASK;
+ const COMPLETELY_UNLOCKED: u64 = 0;
+ 
+ /// Fast atomic lock state for single version
+@@ -110,13 +111,24 @@ impl AtomicLockState {
+     pub fn try_acquire_exclusive(&self) -> bool {
+         self.update_access_time();
+ 
+-        // Must be completely unlocked to acquire exclusive
+-        let expected = 0;
+-        let new_state = WRITER_FLAG_MASK;
++        loop {
++            let current = self.state.load(Ordering::Acquire);
+ 
+-        self.state
+-            .compare_exchange(expected, new_state, Ordering::AcqRel, Ordering::Relaxed)
+-            .is_ok()
++            // Waiter counters describe queued tasks, not active lock holders.
++            // Preserve them while atomically claiming an otherwise unheld lock.
++            if (current & ACTIVE_LOCKS_MASK) != 0 {
++                return false;
++            }
++
++            let new_state = current | WRITER_FLAG_MASK;
++            if self
++                .state
++                .compare_exchange_weak(current, new_state, Ordering::AcqRel, Ordering::Relaxed)
++                .is_ok()
++            {
++                return true;
++            }
++        }
+     }
+ 
+     /// Release shared lock
+@@ -530,6 +542,19 @@ mod tests {
+         assert!(!state.release_exclusive());
+     }
+ 
++    #[test]
++    fn test_waiting_writer_does_not_hold_exclusive_lock() {
++        let state = AtomicLockState::new();
++
++        assert!(state.inc_writers_waiting());
++        assert!(
++            state.try_acquire_exclusive(),
++            "waiter accounting must not prevent an unheld exclusive lock from being acquired"
++        );
++        assert!(state.release_exclusive());
++        state.dec_writers_waiting();
++    }
++
+     #[test]
+     fn test_object_lock_state() {
+         let state = ObjectLockState::new();
+diff --git a/crates/lock/src/fast_lock/tests.rs b/crates/lock/src/fast_lock/tests.rs
+index 62c06292..ed5bf041 100644
+--- a/crates/lock/src/fast_lock/tests.rs
++++ b/crates/lock/src/fast_lock/tests.rs
+@@ -470,6 +470,44 @@ mod fast_lock_tests {
+         }
+     }
+ 
++    #[tokio::test(flavor = "multi_thread")]
++    async fn queued_write_locks_progress_after_long_holder() {
++        let manager = Arc::new(create_test_manager());
++        let key = ObjectKey::new("bucket", "contended-object");
++        let mut holder = manager
++            .acquire_write_lock(key.clone(), "holder")
++            .await
++            .expect("holder should acquire immediately");
++
++        const WAITERS: usize = 32;
++        let mut handles = Vec::with_capacity(WAITERS);
++        for writer in 0..WAITERS {
++            let manager = manager.clone();
++            let key = key.clone();
++            handles.push(tokio::spawn(async move {
++                // Stagger registration so waiter counters remain populated while
++                // other writers re-poll after the long holder releases.
++                sleep(Duration::from_millis(writer as u64 * 3)).await;
++                let request = ObjectLockRequest::new_write(key, format!("writer-{writer}"))
++                    .with_acquire_timeout(Duration::from_secs(3));
++                let mut guard = manager
++                    .acquire_lock(request)
++                    .await
++                    .expect("queued writer should acquire before its timeout");
++                assert!(guard.release());
++            }));
++        }
++
++        // Push every waiter past the quick-backoff phase and into waiter
++        // accounting before making the lock available again.
++        sleep(Duration::from_millis(1_200)).await;
++        assert!(holder.release());
++
++        for handle in handles {
++            handle.await.expect("queued writer task should complete");
++        }
++    }
++
+     #[tokio::test]
+     async fn test_lock_timeout() {
+         let manager = create_test_manager();
