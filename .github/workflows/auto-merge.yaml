@@ -1,6 +1,7 @@
 name: Auto Merge Dependency Updates
 on:
-  - pull_request_target
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
 jobs:
   auto-merge-dependency-updates:
     runs-on: ubuntu-slim
@@ -11,7 +12,9 @@ jobs:
       group: "auto-merge:${{ github.head_ref }}"
       cancel-in-progress: true
     steps:
-      - uses: Mic92/auto-merge@main
+      - name: Auto Merge
+        uses: Mic92/auto-merge@main
         with:
-          use-auto-merge: true
+          repo-token: ${{ github.token }}
+          approve: false
           merge-method: merge
