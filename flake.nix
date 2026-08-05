@@ -41,20 +41,38 @@
         }
       );
 
+      packageNames = builtins.attrNames (
+        lib.filterAttrs (
+          name: type: type == "directory" && builtins.pathExists (./packages + "/${name}/package.nix")
+        ) (builtins.readDir ./packages)
+      );
+
+      mkPackagesFor =
+        pkgs:
+        let
+          scope = lib.makeScope pkgs.newScope (
+            self:
+            {
+              inherit inputs lib;
+              flake = self;
+
+              source = self.callPackage ./packages/source { };
+              buildBuzzFrontend = self.callPackage ./packages/build-buzz-frontend { };
+              buildBuzzRust = self.callPackage ./packages/build-buzz-rust { };
+            }
+            // lib.genAttrs packageNames (name: self.callPackage (./packages + "/${name}/package.nix") { })
+          );
+        in
+        lib.filterAttrs (_name: lib.isDerivation) (lib.genAttrs packageNames (name: scope.${name}));
+
+      packages = eachSystem (system: mkPackagesFor pkgsFor.${system});
     in
     {
-      packages = eachSystem (
-        system:
-        import ./packages {
-          inherit inputs lib;
-          flake = self;
-          pkgs = pkgsFor.${system};
-        }
-      );
+      inherit packages;
 
       checks = eachSystem (
         system:
-        lib.mapAttrs' (name: package: lib.nameValuePair "package-${name}" package) self.packages.${system}
+        lib.mapAttrs' (name: package: lib.nameValuePair "package-${name}" package) packages.${system}
         // {
           devshell-default = self.devShells.${system}.default;
         }
@@ -63,10 +81,10 @@
       devShells = eachSystem (system: {
         default = import ./devshell.nix {
           pkgs = pkgsFor.${system};
-          formatter = self.packages.${system}.formatter;
+          formatter = packages.${system}.formatter;
         };
       });
 
-      formatter = eachSystem (system: self.packages.${system}.formatter);
+      formatter = eachSystem (system: packages.${system}.formatter);
     };
 }
