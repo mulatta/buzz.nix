@@ -70,10 +70,11 @@ nix fmt
 Update the pinned buzz release:
 
 ```sh
-./packages/source/update.py --tag v0.5.0
+./packages/source/update.py --tag desktop-v0.5.9
 ```
 
-Omit `--tag` to use the latest upstream release.
+Omit `--tag` to use the latest upstream release. The updater also accepts the
+legacy `vX.Y.Z` tags used through Buzz 0.5.2.
 
 ## Layout
 

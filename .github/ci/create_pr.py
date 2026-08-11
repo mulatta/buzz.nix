@@ -24,6 +24,20 @@ class PullRequest:
     body: str
 
 
+def build_pull_request(
+    *,
+    old_version: str,
+    new_version: str,
+    old_tag: str,
+    new_tag: str,
+) -> PullRequest:
+    return PullRequest(
+        branch=f"update/buzz-{new_version}",
+        title=f"buzz: {old_version} -> {new_version}",
+        body=f"https://github.com/block/buzz/compare/{old_tag}...{new_tag}",
+    )
+
+
 def run(
     cmd: list[str], *, check: bool = True, capture: bool = False
 ) -> subprocess.CompletedProcess[str]:
@@ -110,6 +124,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("old_version", help="currently pinned buzz version")
     parser.add_argument("new_version", help="new buzz version")
     parser.add_argument(
+        "--old-tag",
+        required=True,
+        help="currently pinned buzz release tag",
+    )
+    parser.add_argument(
+        "--new-tag",
+        required=True,
+        help="new buzz release tag",
+    )
+    parser.add_argument(
         "--no-auto-merge",
         action="store_true",
         help="create or update the PR without enabling GitHub auto-merge",
@@ -122,13 +146,11 @@ def main() -> None:
         raise RuntimeError("GH_TOKEN environment variable is not set")
 
     args = parse_args()
-    pr = PullRequest(
-        branch=f"update/buzz-{args.new_version}",
-        title=f"buzz: {args.old_version} -> {args.new_version}",
-        body=(
-            "https://github.com/block/buzz/compare/"
-            f"v{args.old_version}...v{args.new_version}"
-        ),
+    pr = build_pull_request(
+        old_version=args.old_version,
+        new_version=args.new_version,
+        old_tag=args.old_tag,
+        new_tag=args.new_tag,
     )
     create_or_update_pr(pr, auto_merge=not args.no_auto_merge)
 
