@@ -56,4 +56,6 @@ jobs:
         run: |
           .github/ci/create_pr.py \
             "${{ steps.update.outputs.old_version }}" \
-            "${{ steps.update.outputs.new_version }}"
+            "${{ steps.update.outputs.new_version }}" \
+            --old-tag "${{ steps.update.outputs.old_tag }}" \
+            --new-tag "${{ steps.update.outputs.new_tag }}"

@@ -9,10 +9,11 @@ import os
 import re
 import subprocess
 import sys
-import tomllib
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
+
+import tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_PIN_PATH = REPO_ROOT / "packages/source/pin.json"
@@ -22,13 +23,14 @@ DESKTOP_HASHES_PATH = REPO_ROOT / "packages/buzz-desktop/hashes.json"
 FAKE_HASH = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
 GOT_HASH_RE = re.compile(r"got:\s+(sha256-[A-Za-z0-9+/=]+)")
 SRI_HASH_RE = re.compile(r"sha256-[A-Za-z0-9+/]{43}=")
-SEMVER_TAG_RE = re.compile(
-    r"v(?:0|[1-9][0-9]*)\."
+SEMVER_PATTERN = (
+    r"(?:0|[1-9][0-9]*)\."
     r"(?:0|[1-9][0-9]*)\."
     r"(?:0|[1-9][0-9]*)"
     r"(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
     r"(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
 )
+RELEASE_TAG_RE = re.compile(rf"(?:desktop-)?v(?P<version>{SEMVER_PATTERN})")
 SHERPA_ARCHIVE_SUFFIXES = {
     "x86_64-linux": "linux-x64-static-lib.tar.bz2",
     "aarch64-linux": "linux-aarch64-static-lib.tar.bz2",
@@ -51,63 +53,44 @@ def run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProcess[st
     return result
 
 
-def is_release_tag(tag: str) -> bool:
-    return SEMVER_TAG_RE.fullmatch(tag) is not None
+def parse_release_tag(tag: str) -> str:
+    match = RELEASE_TAG_RE.fullmatch(tag)
+    if match is None:
+        raise RuntimeError(
+            "not a supported buzz release tag "
+            f"(expected v<semver> or desktop-v<semver>): {tag!r}"
+        )
+    return match.group("version")
 
 
 def require_release_tag(tag: str) -> str:
-    if not is_release_tag(tag):
-        raise RuntimeError(f"not a v-prefixed semantic-version tag: {tag!r}")
+    parse_release_tag(tag)
     return tag
 
 
-def select_release_tag(latest_release: str, fallback_tags: Iterable[str]) -> str:
-    if is_release_tag(latest_release):
-        return latest_release
-    for tag in fallback_tags:
-        if is_release_tag(tag):
-            return tag
-    raise RuntimeError("GitHub returned no v-prefixed semantic-version tag")
-
-
 def latest_tag() -> str:
-    release = run(
+    latest_release = run(
         [
             "gh",
             "api",
             "repos/block/buzz/releases/latest",
             "--jq",
             ".tag_name",
-        ],
-        check=False,
-    )
-    latest_release = release.stdout.strip() if release.returncode == 0 else ""
-    if is_release_tag(latest_release):
-        return latest_release
-
-    tags = run(
-        [
-            "gh",
-            "api",
-            "--paginate",
-            "repos/block/buzz/tags",
-            "--jq",
-            ".[].name",
         ]
-    )
-    return select_release_tag(latest_release, tags.stdout.splitlines())
+    ).stdout.strip()
+    return require_release_tag(latest_release)
 
 
 def parse_prefetch_result(output: str) -> tuple[str, Path]:
     data = json.loads(output)
     if not isinstance(data, dict):
-        raise RuntimeError("nix store prefetch-file returned non-object JSON")
+        raise TypeError("nix store prefetch-file returned non-object JSON")
     hash_value = data.get("hash")
     store_path = data.get("storePath")
     if not isinstance(hash_value, str) or SRI_HASH_RE.fullmatch(hash_value) is None:
         raise RuntimeError("nix store prefetch-file returned an invalid hash")
     if not isinstance(store_path, str):
-        raise RuntimeError("nix store prefetch-file returned no store path")
+        raise TypeError("nix store prefetch-file returned no store path")
     return hash_value, Path(store_path)
 
 
@@ -128,28 +111,28 @@ def load_toml(path: Path) -> dict[str, Any]:
     with path.open("rb") as file:
         data = tomllib.load(file)
     if not isinstance(data, dict):
-        raise RuntimeError(f"expected a TOML object in {path}")
+        raise TypeError(f"expected a TOML object in {path}")
     return data
 
 
 def read_package_version(path: Path) -> str:
     package = load_toml(path).get("package")
     if not isinstance(package, dict) or not isinstance(package.get("version"), str):
-        raise RuntimeError(f"package.version not found in {path}")
+        raise TypeError(f"package.version not found in {path}")
     return package["version"]
 
 
 def read_rust_version(path: Path) -> str:
     toolchain = load_toml(path).get("toolchain")
     if not isinstance(toolchain, dict) or not isinstance(toolchain.get("channel"), str):
-        raise RuntimeError(f"toolchain.channel not found in {path}")
+        raise TypeError(f"toolchain.channel not found in {path}")
     return toolchain["channel"]
 
 
 def read_locked_package_version(path: Path, package_name: str) -> str:
     packages = load_toml(path).get("package")
     if not isinstance(packages, list):
-        raise RuntimeError(f"package list not found in {path}")
+        raise TypeError(f"package list not found in {path}")
     versions = [
         package.get("version")
         for package in packages
@@ -165,12 +148,28 @@ def read_locked_package_version(path: Path, package_name: str) -> str:
 def load_json(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text())
     if not isinstance(data, dict):
-        raise RuntimeError(f"expected a JSON object in {path}")
+        raise TypeError(f"expected a JSON object in {path}")
     return data
 
 
 def save_json(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, indent=2) + "\n")
+
+
+def read_source_identity(data: dict[str, Any], path: Path) -> tuple[str, str]:
+    tag = data.get("tag")
+    version = data.get("version")
+    if not isinstance(tag, str):
+        raise TypeError(f"tag is missing or invalid in {path}")
+    if not isinstance(version, str):
+        raise TypeError(f"version is missing or invalid in {path}")
+    tag_version = parse_release_tag(tag)
+    if tag_version != version:
+        raise RuntimeError(
+            f"tag version {tag_version!r} does not match pinned version "
+            f"{version!r} in {path}"
+        )
+    return tag, version
 
 
 def parse_single_got_hash(output: str) -> str:
@@ -288,6 +287,7 @@ def update(
     desktop_hashes_path: Path = DESKTOP_HASHES_PATH,
 ) -> bool:
     tag = require_release_tag(tag)
+    version = parse_release_tag(tag)
     source_data = load_json(source_pin_path)
     frontend_data = load_json(frontend_hashes_path)
     rust_data = load_json(rust_hashes_path)
@@ -295,6 +295,10 @@ def update(
     metadata = (source_data, frontend_data, rust_data, desktop_data)
 
     assert_no_fake_hashes(*metadata)
+    current_tag, _current_version = read_source_identity(
+        source_data,
+        source_pin_path,
+    )
     require_hash(source_data, "hash", source_pin_path)
     require_hash(frontend_data, "pnpmHash", frontend_hashes_path)
     require_hash(rust_data, "cargoHash", rust_hashes_path)
@@ -302,10 +306,9 @@ def update(
 
     sherpa_data = desktop_data.get("sherpaOnnx")
     if not isinstance(sherpa_data, dict):
-        raise RuntimeError(f"sherpaOnnx is missing or invalid in {desktop_hashes_path}")
+        raise TypeError(f"sherpaOnnx is missing or invalid in {desktop_hashes_path}")
 
-    version = tag.removeprefix("v")
-    if source_data.get("version") == version and not force:
+    if current_tag == tag and not force:
         return False
 
     managed_paths = (
@@ -318,6 +321,14 @@ def update(
 
     try:
         source_hash, source_path = prefetch_source(tag)
+        desktop_version = read_package_version(
+            source_path / "desktop/src-tauri/Cargo.toml"
+        )
+        if desktop_version != version:
+            raise RuntimeError(
+                f"desktop package version {desktop_version!r} does not match "
+                f"release tag version {version!r} for {tag!r}"
+            )
         relay_version = read_package_version(
             source_path / "crates/buzz-relay/Cargo.toml"
         )
@@ -332,6 +343,7 @@ def update(
 
         source_data.update(
             {
+                "tag": tag,
                 "version": version,
                 "relayVersion": relay_version,
                 "rustVersion": rust_version,
@@ -390,14 +402,18 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    old_version = load_json(SOURCE_PIN_PATH).get("version")
-    if not isinstance(old_version, str):
-        raise RuntimeError(f"version is missing or invalid in {SOURCE_PIN_PATH}")
+    old_tag, old_version = read_source_identity(
+        load_json(SOURCE_PIN_PATH),
+        SOURCE_PIN_PATH,
+    )
 
     tag = require_release_tag(args.tag) if args.tag else latest_tag()
+    new_version = parse_release_tag(tag)
     changed = update(tag, force=args.force)
+    write_output("old_tag", old_tag)
+    write_output("new_tag", tag)
     write_output("old_version", old_version)
-    write_output("new_version", tag.removeprefix("v"))
+    write_output("new_version", new_version)
     write_output("updated", str(changed).lower())
 
 

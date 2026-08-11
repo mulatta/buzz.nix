@@ -11,7 +11,7 @@ let
   src = fetchFromGitHub {
     owner = "block";
     repo = "buzz";
-    rev = "v${data.version}";
+    rev = data.tag;
     inherit (data) hash;
   };
 in
