@@ -11,6 +11,7 @@ This flake pins Buzz to the release tag recorded in `packages/source/pin.json` a
 | `buzz-cli` | Buzz command-line client (`buzz`) |
 | `buzz-acp` | ACP harness for Buzz agent integrations |
 | `buzz-agent` | Minimal ACP-compliant Buzz agent |
+| `buzz-backend-kubernetes` | Kubernetes backend provider for remote agents |
 | `buzz-dev-mcp` | MCP server for shell and file-edit tools |
 | `git-credential-nostr` | Git credential helper for NIP-98 authentication |
 | `buzz-agent-tools` | Convenience bundle for CLI and agent tools |
