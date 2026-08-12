@@ -62,6 +62,7 @@ else
         buzz \
         buzz-acp \
         buzz-agent \
+        buzz-backend-kubernetes \
         buzz-dev-mcp \
         git-credential-nostr
       do
