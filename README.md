@@ -21,6 +21,7 @@ This flake pins Buzz to the release tag recorded in `packages/source/pin.json` a
 | `buzz-admin-web` | Relay administration UI bundle |
 | `buzz-server-binaries` | Server binary bundle (`buzz-relay`, `buzz-admin`, `buzz-pair-relay`) |
 | `buzz-relay` | Relay runtime package with bundled web UIs |
+| `buzz-push-gateway` | Standalone production APNs push gateway; requires separate database and Apple credentials |
 | `buzz-desktop-frontend` | Frontend bundle embedded in Buzz Desktop |
 | `buzz-desktop-sidecars` | Sidecar bundle required by Buzz Desktop |
 | `buzz-desktop` | Tauri desktop application |
