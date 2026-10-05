@@ -106,6 +106,171 @@ The binary does not restrict request paths. Keep its listener private and expose
 only exact `/pair` through a TLS reverse proxy. The flake uses the server-binary
 package by default, without pulling in the relay's web UI bundles.
 
+## NixOS module
+
+Expose the relay as a system service:
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    buzz = {
+      url = "github:mulatta/buzz.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { buzz, nixpkgs, ... }: {
+    nixosConfigurations.host = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        buzz.nixosModules.buzz-relay
+        {
+          services.buzz-relay = {
+            enable = true;
+            relayUrl = "wss://buzz.example";
+            ownerPubkey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+            secretFiles = {
+              DATABASE_URL = "/run/secrets/buzz-database-url";
+              REDIS_URL = "/run/secrets/buzz-redis-url";
+              BUZZ_RELAY_PRIVATE_KEY = "/run/secrets/buzz-relay-private-key";
+              BUZZ_S3_ACCESS_KEY = "/run/secrets/buzz-s3-access-key";
+              BUZZ_S3_SECRET_KEY = "/run/secrets/buzz-s3-secret-key";
+            };
+            media.baseUrl = "https://buzz.example/media";
+            media.s3Endpoint = "https://s3.example";
+            corsOrigins = [ "https://buzz.example" ];
+          };
+        }
+      ];
+    };
+  };
+}
+```
+
+Common relay tuning is exposed through typed options rather than raw environment variables:
+
+```nix
+services.buzz-relay = {
+  redisPoolSize = 32;
+  databasePoolSize = 80;
+  maxFrameBytes = 1024 * 1024;
+  slowClientGraceLimit = 10;
+  auditEnabled = true;
+  ephemeralTtlOverride = 60;
+};
+```
+
+Leave `ephemeralTtlOverride` as `null` (the default) to honor client-provided ephemeral-channel lifetimes. Use `environment` only for non-secret upstream settings without a typed option.
+
+`services.buzz-relay` manages the relay and optional pairing process. External
+PostgreSQL and Redis remain the default. Opt into local instances and an Nginx
+reverse proxy explicitly:
+
+```nix
+services.buzz-relay = {
+  enable = true;
+  ownerPubkey = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+  database.createLocally = true;
+  redis.createLocally = true;
+  nginx = {
+    enable = true;
+    hostName = "buzz.example";
+    enableACME = true;
+    forceSSL = true;
+  };
+  media = {
+    s3Endpoint = "https://<account-id>.r2.cloudflarestorage.com";
+    s3Bucket = "buzz";
+    s3Region = "auto";
+  };
+  secretFiles = {
+    BUZZ_RELAY_PRIVATE_KEY = "/run/secrets/buzz-relay-private-key";
+    BUZZ_S3_ACCESS_KEY = "/run/secrets/buzz-s3-access-key";
+    BUZZ_S3_SECRET_KEY = "/run/secrets/buzz-s3-secret-key";
+  };
+};
+security.acme = {
+  acceptTerms = true;
+  defaults.email = "admin@example.com";
+};
+networking.firewall.allowedTCPPorts = [ 80 443 ];
+```
+
+Local database/cache mode cannot be combined with the corresponding
+`secretFiles.DATABASE_URL` or `secretFiles.REDIS_URL`. It configures service
+ordering and local connections without putting passwords in the Nix store.
+PostgreSQL version selection/upgrades and host-wide Redis/Valkey package policy
+remain the host's responsibility. S3 storage, bucket provisioning, DNS, backups,
+and secret provisioning are never created automatically.
+
+The Nginx integration supplies overridable defaults for `relayUrl`,
+`media.baseUrl`, and `corsOrigins`. It proxies WebSocket traffic and media/Git
+uploads, but never health or metrics. Leave it disabled for Caddy, an external
+ingress, or custom proxy rules. Configure ACME consent/contact and public firewall
+ports on the host. `adminHost` is not an access-control boundary: protect any
+administration endpoint with your deployment's access policy.
+
+Configure runtime credentials with `secretFiles`, keyed by the upstream environment variable. Each referenced file contains only the raw secret value. Supported keys include `DATABASE_URL`, `REDIS_URL`, `BUZZ_RELAY_PRIVATE_KEY`, `BUZZ_GIT_HOOK_HMAC_SECRET`, `BUZZ_KLIPY_API_KEY`, and S3 credentials. systemd loads them with `LoadCredential`, so their contents stay out of the Nix store and cannot override typed or package-owned settings. Do not put secret values directly in Nix options.
+
+Set `corsOrigins` explicitly in production. An empty list enables upstream's
+permissive development mode and emits a warning. Set `allowPermissiveCors = true`
+only to acknowledge that choice explicitly.
+
+The relay requires a signing key and database/cache connection configuration.
+Static S3 mode requires both `BUZZ_S3_ACCESS_KEY` and `BUZZ_S3_SECRET_KEY` files.
+Set `media.useDefaultCredentials = true` instead to use the AWS default credential
+chain; do not combine it with the static Buzz S3 credential files. This explicitly
+clears upstream's development credential defaults. Any AWS access/secret key files
+must be supplied together. Instance/workload credentials still need to be made
+available within the service's systemd sandbox.
+
+Health and metrics listeners are bound by upstream to `0.0.0.0:${healthPort}` and `0.0.0.0:${metricsPort}`. `openFirewall` opens only the main app port; restrict health and metrics with firewall/proxy policy.
+
+APNs push is disabled by default in the NixOS module by setting `BUZZ_PUSH_GATEWAY_DELIVERY_URL` to an empty string. Set `services.buzz-relay.pushGateway.deliveryUrl` explicitly to use Block's public gateway or a separately deployed self-host push gateway.
+
+### Pairing and administration
+
+For a same-host sidecar, enable pairing alongside the relay's Nginx helper:
+
+```nix
+services.buzz-relay = {
+  nginx = { enable = true; hostName = "buzz.example.com"; };
+  pairingRelay.enable = true;
+  # Defaults to wss://buzz.example.com/pair (ws:// when forceSSL is false).
+  # pairingRelay.url = "wss://buzz.example.com/pair";
+  adminHost = "admin.buzz.example.com"; # optional
+};
+
+# Optional process overrides belong to the standalone service.
+services.buzz-pair-relay.port = 5000;
+```
+
+This enables `services.buzz-pair-relay` and proxies only exact `/pair` to it.
+Other paths still reach the main relay. An explicit local URL may use a separate
+DNS hostname with exactly `/pair`; that host returns 404 for other paths. The
+helper also supports `/pair` on the configured admin host. Hostnames are
+case-insensitive. Custom ports, paths, or TLS policy require a hand-written proxy.
+
+To use a pairing service on another host, set only the advertised URL:
+
+```nix
+services.buzz-relay.pairingRelay = {
+  enable = false;
+  url = "wss://pair.example.com/pair";
+};
+```
+
+This neither starts a local sidecar nor creates a pairing proxy route. An
+independently enabled `services.buzz-pair-relay` is likewise not automatically
+exposed by the relay helper. Without the helper, a local sidecar needs an explicit
+public URL and a separately configured reverse proxy.
+
+`pairingRelay.listenAddress`, `pairingRelay.port`, and `pairingRelay.openFirewall`
+are deprecated aliases for the corresponding `services.buzz-pair-relay` options.
+The relay bundle remains the sidecar's default package when the convenience
+option is used; `services.buzz-pair-relay.package` can override it.
+
 ## Development
 
 Enter the development shell:
@@ -121,13 +286,13 @@ NIX_CONFIG='allow-import-from-derivation = false' nix flake show
 nix build .#checks.aarch64-darwin.package-buzz-cli --no-link
 nix build .#checks.aarch64-darwin.package-buzz-desktop --no-link
 nix build .#checks.x86_64-linux.package-buzz-desktop --no-link
-```
-
-Run the pairing module checks:
-
-```sh
 nix build .#checks.x86_64-linux.module-buzz-pair-relay-options --no-link
 nix build .#checks.x86_64-linux.module-buzz-pair-relay --no-link
+nix build .#checks.x86_64-linux.module-buzz-relay-options --no-link
+nix build .#checks.x86_64-linux.module-buzz-relay-local-options --no-link
+nix build .#checks.x86_64-linux.module-buzz-relay-nginx-options --no-link
+nix build .#checks.x86_64-linux.module-buzz-relay --no-link
+nix build .#checks.x86_64-linux.module-buzz-relay-local-stack --no-link
 ```
 
 Format repository files:
