@@ -332,6 +332,7 @@ def update(
         relay_version = read_package_version(
             source_path / "crates/buzz-relay/Cargo.toml"
         )
+        sprig_version = read_package_version(source_path / "crates/sprig/Cargo.toml")
         rust_version = read_rust_version(source_path / "rust-toolchain.toml")
         sherpa_version = read_locked_package_version(
             source_path / "desktop/src-tauri/Cargo.lock",
@@ -346,6 +347,7 @@ def update(
                 "tag": tag,
                 "version": version,
                 "relayVersion": relay_version,
+                "sprigVersion": sprig_version,
                 "rustVersion": rust_version,
                 "hash": source_hash,
             }

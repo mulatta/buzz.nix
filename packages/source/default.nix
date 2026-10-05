@@ -20,6 +20,7 @@ in
   inherit (data)
     version
     relayVersion
+    sprigVersion
     rustVersion
     ;
 }
