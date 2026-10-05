@@ -76,6 +76,16 @@
         // {
           devshell-default = self.devShells.${system}.default;
         }
+        // lib.optionalAttrs (system == "x86_64-linux") {
+          module-buzz-pair-relay-options = import ./modules/buzz-pair-relay/eval-test.nix {
+            pkgs = pkgsFor.${system};
+          };
+          module-buzz-pair-relay = import ./modules/buzz-pair-relay/nixos-test.nix {
+            pkgs = pkgsFor.${system};
+            package = packages.${system}.buzz-server-binaries;
+            module = self.nixosModules.buzz-pair-relay;
+          };
+        }
       );
 
       devShells = eachSystem (system: {
@@ -86,5 +96,16 @@
       });
 
       formatter = eachSystem (system: packages.${system}.formatter);
+
+      nixosModules = {
+        buzz-pair-relay =
+          { pkgs, ... }:
+          {
+            imports = [ ./modules/buzz-pair-relay ];
+            services.buzz-pair-relay.package =
+              lib.mkOptionDefault
+                packages.${pkgs.stdenv.hostPlatform.system}.buzz-server-binaries;
+          };
+      };
     };
 }

@@ -60,6 +60,52 @@ Build the desktop package:
 nix build github:mulatta/buzz.nix#buzz-desktop
 ```
 
+## Standalone pairing relay
+
+The pairing service is independent of the main relay and needs no PostgreSQL,
+Redis, or S3. Import `buzz.nixosModules.buzz-pair-relay` to run it on a separate
+host:
+
+```nix
+{
+  imports = [ inputs.buzz.nixosModules.buzz-pair-relay ];
+  services.buzz-pair-relay = {
+    enable = true;
+    # package is supplied by the flake; override with any package providing
+    # bin/buzz-pair-relay when needed.
+    listenAddress = "127.0.0.1";
+    port = 5000;
+    openFirewall = false;
+  };
+
+  services.nginx = {
+    enable = true;
+    virtualHosts."pair.example.com" = {
+      enableACME = true;
+      forceSSL = true;
+      locations = {
+        "= /pair" = {
+          proxyPass = "http://127.0.0.1:5000";
+          proxyWebsockets = true;
+          recommendedProxySettings = true;
+          extraConfig = "proxy_read_timeout 130s;";
+        };
+        "/".return = "404";
+      };
+    };
+  };
+  security.acme = {
+    acceptTerms = true;
+    defaults.email = "admin@example.com";
+  };
+  networking.firewall.allowedTCPPorts = [ 80 443 ];
+}
+```
+
+The binary does not restrict request paths. Keep its listener private and expose
+only exact `/pair` through a TLS reverse proxy. The flake uses the server-binary
+package by default, without pulling in the relay's web UI bundles.
+
 ## Development
 
 Enter the development shell:
@@ -75,6 +121,13 @@ NIX_CONFIG='allow-import-from-derivation = false' nix flake show
 nix build .#checks.aarch64-darwin.package-buzz-cli --no-link
 nix build .#checks.aarch64-darwin.package-buzz-desktop --no-link
 nix build .#checks.x86_64-linux.package-buzz-desktop --no-link
+```
+
+Run the pairing module checks:
+
+```sh
+nix build .#checks.x86_64-linux.module-buzz-pair-relay-options --no-link
+nix build .#checks.x86_64-linux.module-buzz-pair-relay --no-link
 ```
 
 Format repository files:
