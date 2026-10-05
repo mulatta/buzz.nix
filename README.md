@@ -14,6 +14,7 @@ This flake pins Buzz to the release tag recorded in `packages/source/pin.json` a
 | `buzz-backend-kubernetes` | Kubernetes backend provider for remote agents |
 | `buzz-dev-mcp` | MCP server for shell and file-edit tools |
 | `git-credential-nostr` | Git credential helper for NIP-98 authentication |
+| `git-sign-nostr` | Nostr signing backend for Git commits and tags |
 | `buzz-agent-tools` | Convenience bundle for CLI and agent tools |
 | `buzz-web` | Web client bundle |
 | `buzz-admin-web` | Relay administration UI bundle |
