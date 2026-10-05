@@ -384,6 +384,9 @@ legacy `vX.Y.Z` tags used through Buzz 0.5.2.
 
 ## Layout
 
+- `checks/default.nix` assembles package and devShell checks and explicitly registers the x86_64-linux evaluation and VM checks.
+- `checks/eval` contains module evaluation tests; `checks/vm` contains service and integration VM tests.
+- Evaluation tests return check derivations; inspect them through `checks.x86_64-linux.<name>.drvPath` without building a VM.
 - `packages/*/package.nix` are public flake package definitions.
 - `packages/source` provides the pinned upstream source plus source-derived metadata needed at evaluation time.
 - `packages/build-buzz-frontend` and `packages/build-buzz-rust` are package-scoped internal builders with locally owned dependency hashes.

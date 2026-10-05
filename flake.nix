@@ -72,59 +72,12 @@
 
       checks = eachSystem (
         system:
-        lib.mapAttrs' (name: package: lib.nameValuePair "package-${name}" package) packages.${system}
-        // {
-          devshell-default = self.devShells.${system}.default;
-        }
-        // lib.optionalAttrs (system == "x86_64-linux") {
-          module-buzz-pair-relay-options = import ./modules/buzz-pair-relay/eval-test.nix {
-            pkgs = pkgsFor.${system};
-          };
-          module-buzz-pair-relay = import ./modules/buzz-pair-relay/nixos-test.nix {
-            pkgs = pkgsFor.${system};
-            package = packages.${system}.buzz-server-binaries;
-            module = self.nixosModules.buzz-pair-relay;
-          };
-          module-buzz-push-gateway = import ./modules/buzz-push-gateway/eval-test.nix {
-            pkgs = pkgsFor.${system};
-            module = self.nixosModules.buzz-push-gateway;
-          };
-          module-buzz-relay-local-options =
-            assert (import ./tests/buzz-relay-local-eval.nix { inherit nixpkgs; }).success;
-            pkgsFor.${system}.runCommand "buzz-relay-local-options" { } "touch $out";
-          module-buzz-relay-nginx-options =
-            assert (import ./tests/buzz-relay-nginx-eval.nix { inherit nixpkgs; }).success;
-            pkgsFor.${system}.runCommand "buzz-relay-nginx-options" { } "touch $out";
-          module-buzz-relay-local-stack = import ./tests/buzz-relay-local-stack.nix {
-            pkgs = pkgsFor.${system};
-            pairPackage = packages.${system}.buzz-server-binaries;
-            module = self.nixosModules.buzz-relay;
-          };
-          module-buzz-relay-options = import ./tests/buzz-relay-eval.nix {
-            pkgs = pkgsFor.${system};
-            relayModule = self.nixosModules.buzz-relay;
-          };
-          module-evaluation = import ./tests/modules-eval.nix {
-            pkgs = pkgsFor.${system};
-            relayModule = self.nixosModules.buzz-relay;
-            pushModule = self.nixosModules.buzz-push-gateway;
-          };
-          module-buzz-relay = import ./modules/buzz-relay/nixos-test.nix {
-            module = self.nixosModules.buzz-relay;
-            pkgs = pkgsFor.${system};
-          };
-          nixos-buzz-relay-s3-admission-gate = import ./tests/buzz-relay.nix {
-            inherit lib;
-            module = self.nixosModules.buzz-relay;
-            package = self.packages.${system}.buzz-relay;
-            pkgs = pkgsFor.${system};
-          };
-          nixos-buzz-relay-rustfs-integration = import ./tests/buzz-relay-positive.nix {
-            inherit lib;
-            module = self.nixosModules.buzz-relay;
-            package = self.packages.${system}.buzz-relay;
-            pkgs = pkgsFor.${system};
-          };
+        import ./checks {
+          pkgs = pkgsFor.${system};
+          inherit nixpkgs;
+          packages = packages.${system};
+          devShells = self.devShells.${system};
+          inherit (self) nixosModules;
         }
       );
 

@@ -1,7 +1,5 @@
-# Run with: nix eval --json --impure --expr 'import ./tests/buzz-relay-nginx-eval.nix {}'
-{
-  nixpkgs ? (builtins.getFlake (toString ../.)).inputs.nixpkgs,
-}:
+# From the repository root: nix eval .#checks.x86_64-linux.module-buzz-relay-nginx-options.drvPath
+{ nixpkgs, pkgs }:
 let
   inherit (nixpkgs) lib;
   evaluate =
@@ -9,9 +7,9 @@ let
     (lib.nixosSystem {
       system = "x86_64-linux";
       modules = [
-        ../modules/buzz-relay/options.nix
-        ../modules/buzz-relay/nginx.nix
-        ../modules/buzz-pair-relay
+        ../../modules/buzz-relay/options.nix
+        ../../modules/buzz-relay/nginx.nix
+        ../../modules/buzz-pair-relay
         ({ pkgs, config, ... }: {
           services.buzz-relay = {
             enable = true;
@@ -163,6 +161,4 @@ assert invalid {
     url = "wss://relay.example.org/pair";
   };
 };
-{
-  success = true;
-}
+pkgs.runCommand "buzz-relay-nginx-options" { } "touch $out"

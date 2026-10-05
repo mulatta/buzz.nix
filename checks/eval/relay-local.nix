@@ -1,5 +1,5 @@
-# Run with: nix-instantiate --eval --strict --json tests/buzz-relay-local-eval.nix --arg nixpkgs /path/to/nixpkgs
-{ nixpkgs }:
+# From the repository root: nix eval .#checks.x86_64-linux.module-buzz-relay-local-options.drvPath
+{ nixpkgs, pkgs }:
 let
   lib = import (nixpkgs + "/lib");
   evaluate =
@@ -7,10 +7,10 @@ let
     (import (nixpkgs + "/nixos/lib/eval-config.nix") {
       system = "x86_64-linux";
       modules = [
-        ../modules/buzz-pair-relay
-        ../modules/buzz-relay/options.nix
-        ../modules/buzz-relay/config.nix
-        ../modules/buzz-relay/local-services.nix
+        ../../modules/buzz-pair-relay
+        ../../modules/buzz-relay/options.nix
+        ../../modules/buzz-relay/config.nix
+        ../../modules/buzz-relay/local-services.nix
         ({ pkgs, ... }: {
           services.buzz-relay = {
             enable = true;
@@ -82,6 +82,4 @@ assert builtins.elem
   conflictMessages;
 assert builtins.elem "services.buzz-relay.redis.createLocally conflicts with secretFiles.REDIS_URL."
   conflictMessages;
-{
-  success = true;
-}
+pkgs.runCommand "buzz-relay-local-options" { } "touch $out"

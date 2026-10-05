@@ -2,7 +2,7 @@
 {
   pkgs,
   package,
-  module ? ./default.nix,
+  module ? ../../modules/buzz-pair-relay,
 }:
 pkgs.testers.runNixOSTest {
   name = "buzz-pair-relay-standalone";

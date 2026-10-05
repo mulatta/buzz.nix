@@ -1,6 +1,6 @@
 {
   pkgs,
-  module ? ./default.nix,
+  module ? ../../modules/buzz-pair-relay,
 }:
 let
   inherit (pkgs) lib;
