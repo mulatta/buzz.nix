@@ -119,6 +119,12 @@
             package = self.packages.${system}.buzz-relay;
             pkgs = pkgsFor.${system};
           };
+          nixos-buzz-relay-rustfs-integration = import ./tests/buzz-relay-positive.nix {
+            inherit lib;
+            module = self.nixosModules.buzz-relay;
+            package = self.packages.${system}.buzz-relay;
+            pkgs = pkgsFor.${system};
+          };
         }
       );
 

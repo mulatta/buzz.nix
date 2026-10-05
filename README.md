@@ -234,6 +234,12 @@ test-only proxy that deliberately rejects conditional `If-Match` writes while
 forwarding ordinary S3 requests to an unmodified RustFS backend. This does not
 assume that any particular RustFS release is broken.
 
+`nixos-buzz-relay-rustfs-integration` exercises successful relay startup,
+health/readiness, web/admin routing, restart behavior, and dependency recovery
+against unmodified `pkgs.rustfs`. The pinned RustFS 1.0.0 already includes the
+exclusive-lock waiter-accounting fix; no local RustFS patch is applied. These
+are VM test definitions, not a claim that every S3-compatible backend is safe.
+
 ### Pairing and administration
 
 For a same-host sidecar, enable pairing alongside the relay's Nginx helper:
@@ -358,6 +364,7 @@ nix build .#checks.x86_64-linux.module-buzz-push-gateway --no-link
 nix build .#checks.x86_64-linux.module-buzz-relay --no-link
 nix build .#checks.x86_64-linux.module-buzz-relay-local-stack --no-link
 nix build .#checks.x86_64-linux.nixos-buzz-relay-s3-admission-gate --no-link
+nix build .#checks.x86_64-linux.nixos-buzz-relay-rustfs-integration --no-link
 ```
 
 Format repository files:
