@@ -31,6 +31,18 @@ Run the CLI:
 nix run github:mulatta/buzz.nix#buzz-cli -- --help
 ```
 
+The CLI package includes the upstream agent skill at
+`share/skills/buzz-cli/sprout-cli/SKILL.md` (its declared skill name is
+`buzz-cli`). The `buzz-agent-tools` bundle also exposes it. Only the CLI skill
+is packaged; repository-development and example skills are excluded.
+
+Packaging does not register the skill with an agent. Link the installed
+`share/skills/buzz-cli/sprout-cli` directory into the desired agent's skill
+directory, such as `~/.claude/skills/buzz-cli`. On NixOS, add
+`environment.pathsToLink = [ "/share/skills" ];` when exposing skills through
+the system profile. Keep credentials in the runtime environment, not in the
+skill or Nix configuration.
+
 Run the relay:
 
 ```sh

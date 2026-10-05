@@ -33,6 +33,9 @@ in
   metaDescription,
   mainProgram ? binary,
   needsOpenSSL ? true,
+  nativeBuildInputs ? [ ],
+  postInstall ? null,
+  dontInstallAgentSkills ? null,
   installCheckPhase ? null,
 }:
 
@@ -59,9 +62,9 @@ rustPlatform.buildRustPackage (
     strictDeps = true;
     doCheck = false;
 
-    nativeBuildInputs = lib.optionals (needsOpenSSL && pkgs.stdenv.hostPlatform.isLinux) [
-      pkgs.pkg-config
-    ];
+    nativeBuildInputs =
+      lib.optionals (needsOpenSSL && pkgs.stdenv.hostPlatform.isLinux) [ pkgs.pkg-config ]
+      ++ nativeBuildInputs;
     buildInputs = lib.optionals (needsOpenSSL && pkgs.stdenv.hostPlatform.isLinux) [ pkgs.openssl ];
 
     doInstallCheck = true;
@@ -80,6 +83,8 @@ rustPlatform.buildRustPackage (
       }
       // lib.optionalAttrs (mainProgram != null) { inherit mainProgram; };
   }
+  // lib.optionalAttrs (postInstall != null) { inherit postInstall; }
+  // lib.optionalAttrs (dontInstallAgentSkills != null) { inherit dontInstallAgentSkills; }
   // lib.optionalAttrs buildsRelay {
     postPatch = ''
       substituteInPlace crates/buzz-relay/src/api/git/hook.rs \
