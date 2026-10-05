@@ -271,6 +271,63 @@ are deprecated aliases for the corresponding `services.buzz-pair-relay` options.
 The relay bundle remains the sidecar's default package when the convenience
 option is used; `services.buzz-pair-relay.package` can override it.
 
+### Independent APNs gateway
+
+Import `buzz.nixosModules.buzz-push-gateway` separately. It does not enable a
+relay, provision PostgreSQL, or configure a public proxy:
+
+```nix
+services.buzz-push-gateway = {
+  enable = true;
+  port = 8090;
+  healthPort = 8091;
+  databaseUrlFile = "/run/secrets/push-runtime-database-url";
+  grantKeysFile = "/run/secrets/push-grant-keys";
+  tokenKeysFile = "/run/secrets/push-token-keys";
+  appAttest = {
+    appId = "TEAMID.com.example.buzz";
+    rootCertificateFile = "/run/credentials/apple-app-attestation-root.pem";
+  };
+  apns = {
+    topic = "com.example.buzz";
+    identityFile = "/run/secrets/push-apns-identity.pem";
+    environment = "production";
+  };
+  # Optional; otherwise provision the schema outside this service.
+  migration = {
+    enable = true;
+    databaseUrlFile = "/run/secrets/push-migration-database-url";
+    runtimeDatabaseRole = "buzz_push_gateway_runtime";
+  };
+};
+```
+
+Use a dedicated gateway database, not the relay database. Provision the runtime
+LOGIN role before migration. Runtime credentials should have only the upstream
+DML grants; the optional migration unit alone receives the separate DDL URL.
+The ordered grant and token keyrings use `id:base64-32-bytes` entries separated
+by commas; their IDs and key bytes must not overlap.
+
+The pinned gateway supports the compiled-in `buzz-ios-dogfood` profile and
+production App Attest. It requires Apple's exact pinned App Attestation Root CA
+and a combined APNs certificate/private-key PEM, **not** an APNs token-signing
+`.p8` key. APNs sandbox transport does not enable development App Attest.
+Your client must match this profile; packaging alone does not make an arbitrary
+iOS app compatible. Upstream attestation audiences remain fixed `push.buzz.xyz`
+protocol constants, even when the service is hosted under another domain.
+
+The gateway defaults to public port `8090` and health/metrics port `8091`,
+separate from the relay defaults. When both modules are enabled, their listener
+ports (including local pairing and Redis) must be distinct, even when bound to
+different addresses. Local Redis must also use a port distinct from relay listeners.
+Migration role names must be ASCII SQL identifiers of at most 63 characters.
+
+Expose the public HTTP port behind an HTTPS proxy and keep the health/metrics
+port private. On the relay, opt in with
+`pushGateway.deliveryUrl = "https://push.example/v1/deliveries/apns";`.
+There is no implicit connection between the two modules. Both secret files and
+public runtime certificate files must exist before the gateway starts.
+
 ## Development
 
 Enter the development shell:
@@ -289,8 +346,10 @@ nix build .#checks.x86_64-linux.package-buzz-desktop --no-link
 nix build .#checks.x86_64-linux.module-buzz-pair-relay-options --no-link
 nix build .#checks.x86_64-linux.module-buzz-pair-relay --no-link
 nix build .#checks.x86_64-linux.module-buzz-relay-options --no-link
+nix build .#checks.x86_64-linux.module-evaluation --no-link
 nix build .#checks.x86_64-linux.module-buzz-relay-local-options --no-link
 nix build .#checks.x86_64-linux.module-buzz-relay-nginx-options --no-link
+nix build .#checks.x86_64-linux.module-buzz-push-gateway --no-link
 nix build .#checks.x86_64-linux.module-buzz-relay --no-link
 nix build .#checks.x86_64-linux.module-buzz-relay-local-stack --no-link
 ```

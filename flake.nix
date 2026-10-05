@@ -85,6 +85,10 @@
             package = packages.${system}.buzz-server-binaries;
             module = self.nixosModules.buzz-pair-relay;
           };
+          module-buzz-push-gateway = import ./modules/buzz-push-gateway/eval-test.nix {
+            pkgs = pkgsFor.${system};
+            module = self.nixosModules.buzz-push-gateway;
+          };
           module-buzz-relay-local-options =
             assert (import ./tests/buzz-relay-local-eval.nix { inherit nixpkgs; }).success;
             pkgsFor.${system}.runCommand "buzz-relay-local-options" { } "touch $out";
@@ -99,6 +103,11 @@
           module-buzz-relay-options = import ./tests/buzz-relay-eval.nix {
             pkgs = pkgsFor.${system};
             relayModule = self.nixosModules.buzz-relay;
+          };
+          module-evaluation = import ./tests/modules-eval.nix {
+            pkgs = pkgsFor.${system};
+            relayModule = self.nixosModules.buzz-relay;
+            pushModule = self.nixosModules.buzz-push-gateway;
           };
           module-buzz-relay = import ./modules/buzz-relay/nixos-test.nix {
             module = self.nixosModules.buzz-relay;
@@ -133,6 +142,14 @@
               self.nixosModules.buzz-pair-relay
             ];
             services.buzz-relay.package = lib.mkDefault packages.${pkgs.stdenv.hostPlatform.system}.buzz-relay;
+          };
+        buzz-push-gateway =
+          { pkgs, ... }:
+          {
+            imports = [ ./modules/buzz-push-gateway ];
+            services.buzz-push-gateway.package =
+              lib.mkDefault
+                packages.${pkgs.stdenv.hostPlatform.system}.buzz-push-gateway;
           };
         default = self.nixosModules.buzz-relay;
       };
