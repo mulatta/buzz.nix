@@ -229,6 +229,11 @@ Health and metrics listeners are bound by upstream to `0.0.0.0:${healthPort}` an
 
 APNs push is disabled by default in the NixOS module by setting `BUZZ_PUSH_GATEWAY_DELIVERY_URL` to an empty string. Set `services.buzz-relay.pushGateway.deliveryUrl` explicitly to use Block's public gateway or a separately deployed self-host push gateway.
 
+`nixos-buzz-relay-s3-admission-gate` exercises fail-closed startup with a
+test-only proxy that deliberately rejects conditional `If-Match` writes while
+forwarding ordinary S3 requests to an unmodified RustFS backend. This does not
+assume that any particular RustFS release is broken.
+
 ### Pairing and administration
 
 For a same-host sidecar, enable pairing alongside the relay's Nginx helper:
@@ -352,6 +357,7 @@ nix build .#checks.x86_64-linux.module-buzz-relay-nginx-options --no-link
 nix build .#checks.x86_64-linux.module-buzz-push-gateway --no-link
 nix build .#checks.x86_64-linux.module-buzz-relay --no-link
 nix build .#checks.x86_64-linux.module-buzz-relay-local-stack --no-link
+nix build .#checks.x86_64-linux.nixos-buzz-relay-s3-admission-gate --no-link
 ```
 
 Format repository files:

@@ -113,6 +113,12 @@
             module = self.nixosModules.buzz-relay;
             pkgs = pkgsFor.${system};
           };
+          nixos-buzz-relay-s3-admission-gate = import ./tests/buzz-relay.nix {
+            inherit lib;
+            module = self.nixosModules.buzz-relay;
+            package = self.packages.${system}.buzz-relay;
+            pkgs = pkgsFor.${system};
+          };
         }
       );
 
