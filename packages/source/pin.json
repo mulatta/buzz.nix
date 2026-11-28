@@ -1,8 +1,8 @@
 {
-  "tag": "desktop-v0.5.28",
-  "version": "0.5.28",
-  "relayVersion": "0.2.1",
+  "tag": "desktop-v0.5.30",
+  "version": "0.5.30",
+  "relayVersion": "0.3.0",
   "sprigVersion": "0.1.0",
-  "rustVersion": "1.95.0",
-  "hash": "sha256-NEsLQwcoQ2zTgznFgGFGNgYPnoclicNVycSEjl7I0Wo="
+  "rustVersion": "1.98.1",
+  "hash": "sha256-Ay6zUeHHYO92/Fs4FGHm1+QQUoUEQjYyOC3dDg5+7Ss="
 }
